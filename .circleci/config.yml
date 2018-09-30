@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 default_workflow_jobs: &default_workflow_jobs
   - lint
@@ -68,6 +68,33 @@ workflows:
               only:
                 - master
 
+commands:
+  updateDockerCompose:
+    description: "Update Docker Compose"
+    parameters:
+      version:
+        type: string
+        default: "1.22.0"
+    steps:
+      - run: sudo curl -L https://github.com/docker/compose/releases/download/<< parameters.version >>/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+      - run: sudo chmod +x /usr/local/bin/docker-compose
+  dockerLoad:
+    description: "Load Docker images from file"
+    parameters:
+      image:
+        type: string
+    steps:
+      - run: docker load -i ./tmp/usabillabv_php-<< parameters.image >>.tar
+  dockerLoadAll:
+    description: "Load all available docker images"
+    steps:
+      - dockerLoad:
+          image: http
+      - dockerLoad:
+          image: fpm
+      - dockerLoad:
+          image: cli
+
 jobs:
   lint:
     machine: true
@@ -85,11 +112,8 @@ jobs:
       - checkout
       - attach_workspace:
           at: ./tmp
-      - run:
-          name: Update Docker Compose
-          command: |
-            sudo curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
+      - updateDockerCompose:
+          version: "1.22.0"
       - run: docker load -i ./tmp/usabillabv_php-http.tar
       - run: docker load -i ./tmp/usabillabv_php-fpm.tar
       - run: docker load -i ./tmp/usabillabv_php-cli.tar
@@ -102,11 +126,8 @@ jobs:
       - checkout
       - attach_workspace:
           at: ./tmp
-      - run:
-          name: Update Docker Compose
-          command: |
-            sudo curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
+      - updateDockerCompose:
+          version: "1.22.0"
       - run:
           name: Install clair-scanner
           command: |
